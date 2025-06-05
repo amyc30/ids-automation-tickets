@@ -33,23 +33,6 @@ def create_jira_ticket(task_data):
         password=API_TOKEN
     )
 
-    # Get available priorities using REST API
-    try:
-        response = requests.get(
-            f"{JIRA_URL}/rest/api/2/priority",
-            auth=(USERNAME, API_TOKEN),
-            headers={'Accept': 'application/json'}
-        )
-        if response.status_code == 200:
-            priorities = response.json()
-            print(f"\n{Fore.YELLOW}Available priorities in Jira:{Style.RESET_ALL}")
-            for priority in priorities:
-                print(f"ID: {priority['id']}, Name: {priority['name']}")
-        else:
-            print(f"{Fore.RED}Failed to fetch priorities. Status code: {response.status_code}{Style.RESET_ALL}")
-    except Exception as e:
-        print(f"{Fore.RED}Failed to fetch priorities: {str(e)}{Style.RESET_ALL}")
-
     # Map effort levels to story points
     effort_map = {
         "SMALL (1-3 DAYS)": 2,
