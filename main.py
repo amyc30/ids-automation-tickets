@@ -47,7 +47,7 @@ def create_jira_ticket(task_data):
     # Debug print for task data
     print(f"\n{Fore.YELLOW}Debug - Task Data:{Style.RESET_ALL}")
     print(f"Title: {task_data[0]}")
-    print(f"Priority: {task_data[1].replace('Red', '').replace('Yellow', '')}")
+    print(f"Priority: {task_data[1].replace('Red', '').replace('Yellow', '').replace('Green', '')}")
     print(f"Level of Effort: {task_data[2]}")
     print(f"Owner: {task_data[3]}")
     print(f"Note: {task_data[4]}")
@@ -119,28 +119,22 @@ def extract_tagged_users(cell, confluence_url, username, api_token):
     
     # Find all user elements
     user_elements = cell.find_all('ri:user')
-    print(f"\n{Fore.YELLOW}Debug - Found user elements:{Style.RESET_ALL}")
-    print(f"Number of users found: {len(user_elements)}")
     
     for user in user_elements:
         # Get the account ID
         account_id = user.get('ri:account-id')
-        print(f"\n{Fore.YELLOW}Processing user with account ID: {account_id}{Style.RESET_ALL}")
         
         if account_id:
             try:
                 # Get user details using direct API call
                 user_details = get_user_details(account_id, confluence_url, username, api_token)
-                print(f"User details from API: {user_details}")
                 
                 if user_details and 'displayName' in user_details:
                     display_name = user_details['displayName']
-                    print(f"Using display name: {display_name}")
                     users.append(display_name)
                 else:
                     # Fallback to account ID if display name not found
                     fallback_id = account_id.split(':')[-1]
-                    print(f"Display name not found, using fallback ID: {fallback_id}")
                     users.append(fallback_id)
             except Exception as e:
                 print(f"{Fore.RED}Error fetching user details: {str(e)}{Style.RESET_ALL}")
@@ -149,7 +143,6 @@ def extract_tagged_users(cell, confluence_url, username, api_token):
                 print(f"Using fallback ID due to error: {fallback_id}")
                 users.append(fallback_id)
     
-    print(f"\n{Fore.GREEN}Final list of users: {users}{Style.RESET_ALL}")
     return users
 
 def get_scope_table():
@@ -198,18 +191,13 @@ def get_scope_table():
         for td in row.find_all('td'):
             # Special handling for owner cell (assuming it's the 4th column)
             if len(cells) == 3:  # Owner column
-                print(f"\n{Fore.CYAN}Processing owner cell:{Style.RESET_ALL}")
                 users = extract_tagged_users(td, CONFLUENCE_URL, USERNAME, API_TOKEN)
                 owner_text = ', '.join(users) if users else ''
-                print(f"Owner text for table: {owner_text}")
                 cells.append(owner_text)
             else:
                 cells.append(td.get_text(strip=True))
         if cells:
             rows.append(cells)
-            # Debug print for each row
-            print(f"\n{Fore.YELLOW}Debug - Row Data:{Style.RESET_ALL}")
-            print(cells)
     
     # Print the table with formatting
     print(f"\n{Fore.CYAN}Table under Scope header:{Style.RESET_ALL}")
