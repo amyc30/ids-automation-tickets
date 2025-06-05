@@ -25,7 +25,7 @@ PAGE_ID = os.getenv('CONFLUENCE_PAGE_ID')
 JIRA_PROJECT = "IDS"  # Your project key
 ISSUE_TYPE = "Task"
 
-def create_jira_ticket(task_data):
+def create_jira_ticket(task_data, reporter_account_id):
     # Initialize Jira client
     jira = Jira(
         url=JIRA_URL,
@@ -40,9 +40,8 @@ def create_jira_ticket(task_data):
         "LARGE (3+ WEEKS)": 8
     }
 
-    # Get the assignee from the environment variable
-    # Remove domain part if present (e.g., "amy.chen@instacart.com" -> "amy.chen")
-    assignee = USERNAME.split('@')[0]
+    # Get the owner account ID from the table (last element)
+    assignee_account_id = task_data[-1]  # The account ID we stored at the end of the cells
 
     # Debug print for task data
     print(f"\n{Fore.YELLOW}Debug - Task Data:{Style.RESET_ALL}")
@@ -50,6 +49,7 @@ def create_jira_ticket(task_data):
     print(f"Priority: {task_data[1].replace('Red', '').replace('Yellow', '').replace('Green', '')}")
     print(f"Level of Effort: {task_data[2]}")
     print(f"Owner: {task_data[3]}")
+    print(f"Owner Account ID: {assignee_account_id}")
     print(f"Note: {task_data[4]}")
 
     # Clean up effort text and get story points
@@ -64,17 +64,17 @@ def create_jira_ticket(task_data):
             "description": f'''
 *Note from Confluence:*
 {task_data[4]}
-
-*Original Data:*
-* Priority: {task_data[1]}
-* Level of Effort: {task_data[2]} (Story Points: {story_points})
-* Original Owner: {task_data[3]}
             ''',
             "issuetype": {"name": ISSUE_TYPE},
             "priority": {"name": task_data[1].replace('Red', '').replace('Yellow', '')},  # Just clean the priority text
-            "assignee": {"name": assignee}  # Use the username from environment variable
+            "assignee": {"id": assignee_account_id},  # Use the account ID for assignee
+            "reporter": {"id": reporter_account_id}  # Use the account ID for reporter
         }
     }
+
+    # Debug print the complete issue data
+    print(f"\n{Fore.YELLOW}Debug - Issue Data:{Style.RESET_ALL}")
+    print(json.dumps(issue_data, indent=2))
 
     try:
         # Create the issue
@@ -83,7 +83,7 @@ def create_jira_ticket(task_data):
         print(f"Title: {task_data[0]}")
         print(f"Priority: {task_data[1]}")
         print(f"Story Points: {story_points}")
-        print(f"Assignee: {assignee}")
+        print(f"Assignee: {task_data[3]}")
         return ticket
     except Exception as e:
         print(f"{Fore.RED}Failed to create Jira ticket: {str(e)}{Style.RESET_ALL}")
@@ -168,6 +168,24 @@ def get_scope_table():
     # Parse HTML with BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
     
+    # Find the DRI line
+    dri = None
+    dri_account_id = None
+    for p in soup.find_all('p'):
+        text = p.get_text(strip=True)
+        if text.startswith('DRI:'):
+            # Find the user element to get account ID
+            user_element = p.find('ri:user')
+            if user_element:
+                dri_account_id = user_element.get('ri:account-id')
+                # Get display name for debug
+                users = extract_tagged_users(p, CONFLUENCE_URL, USERNAME, API_TOKEN)
+                if users:
+                    print(f"\n{Fore.YELLOW}Debug - DRI/Reporter:{Style.RESET_ALL}")
+                    print(f"Original: {users[0]}")
+                    print(f"Account ID: {dri_account_id}")
+                break
+    
     # Find the Scope header
     scope_header = soup.find('h1', string='Scope')
     if not scope_header:
@@ -188,25 +206,36 @@ def get_scope_table():
     rows = []
     for row in table.find_all('tr')[1:]:  # Skip header row
         cells = []
-        for td in row.find_all('td'):
-            # Special handling for owner cell (assuming it's the 4th column)
-            if len(cells) == 3:  # Owner column
+        owner_account_id = None
+        for i, td in enumerate(row.find_all('td')):
+            if i == 3:  # Owner column (4th column)
+                # Get the first user element for account ID
+                user_element = td.find('ri:user')
+                if user_element:
+                    owner_account_id = user_element.get('ri:account-id')
+                # Get display names for display
                 users = extract_tagged_users(td, CONFLUENCE_URL, USERNAME, API_TOKEN)
                 owner_text = ', '.join(users) if users else ''
                 cells.append(owner_text)
+            elif i == 4:  # Note column (5th column)
+                cells.append(td.get_text(strip=True))
             else:
                 cells.append(td.get_text(strip=True))
         if cells:
+            # Add the owner account ID as the last element
+            cells.append(owner_account_id)
             rows.append(cells)
     
     # Print the table with formatting
     print(f"\n{Fore.CYAN}Table under Scope header:{Style.RESET_ALL}")
-    print(tabulate(rows, headers=headers, tablefmt="grid"))
+    # Create a copy of rows without the account ID for display
+    display_rows = [row[:-1] for row in rows] if rows and len(rows[0]) > 5 else rows
+    print(tabulate(display_rows, headers=headers, tablefmt="grid"))
 
     # Create Jira ticket for the first row
     if rows:
         print(f"\n{Fore.YELLOW}Creating Jira ticket for first task...{Style.RESET_ALL}")
-        create_jira_ticket(rows[0])
+        create_jira_ticket(rows[0], dri_account_id)  # Pass the DRI account ID to create_jira_ticket
     else:
         print(f"{Fore.RED}No tasks found in the table.{Style.RESET_ALL}")
 
