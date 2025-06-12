@@ -19,14 +19,14 @@ CONFLUENCE_URL = os.getenv('CONFLUENCE_URL')
 JIRA_URL = os.getenv('CONFLUENCE_URL')  # Using same URL for Jira
 USERNAME = os.getenv('CONFLUENCE_USERNAME')
 API_TOKEN = os.getenv('CONFLUENCE_API_TOKEN')
-PAGE_ID = os.getenv('CONFLUENCE_PAGE_ID')
+PAGE_ID = os.getenv('H2_PAGE_ID')
 
 # Jira configuration
 JIRA_PROJECT = os.getenv('JIRA_PROJECT')
-ISSUE_TYPE = "Task"
-PRD_PAGE_TABLE_HEADER = os.getenv('PRD_PAGE_TABLE_HEADER')
+ISSUE_TYPE = "Epic"
+H2_PAGE_TABLE_HEADER = os.getenv('H2_PAGE_TABLE_HEADER')
 
-def create_jira_ticket(task_data, reporter_account_id):
+def create_jira_epic(task_data, reporter_account_id):
     # Initialize Jira client
     jira = Jira(
         url=JIRA_URL,
@@ -34,18 +34,11 @@ def create_jira_ticket(task_data, reporter_account_id):
         password=API_TOKEN
     )
 
-    # Map effort levels to story points
-    effort_map = {
-        "SMALL (1-3 DAYS)": 2,
-        "MEDIUM (1-2 WEEKS)": 5,
-        "LARGE (3+ WEEKS)": 8
-    }
-
-    # Get the owner account ID from the table (last element)
+    # Get the first owner's account ID from the table
     assignee_account_id = task_data[-1]  # The account ID we stored at the end of the cells
 
     # Debug print for task data
-    print(f"\n{Fore.YELLOW}Debug - Task Data:{Style.RESET_ALL}")
+    print(f"\n{Fore.YELLOW}Debug - Epic Data:{Style.RESET_ALL}")
     print(f"Title: {task_data[0]}")
     print(f"Priority: {task_data[1].replace('Red', '').replace('Yellow', '').replace('Green', '')}")
     print(f"Level of Effort: {task_data[2]}")
@@ -53,23 +46,20 @@ def create_jira_ticket(task_data, reporter_account_id):
     print(f"Owner Account ID: {assignee_account_id}")
     print(f"Note: {task_data[4]}")
 
-    # Clean up effort text and get story points
-    effort_text = task_data[2].replace('Red', '').replace('Yellow', '').strip()
-    story_points = effort_map.get(effort_text, 3)  # Default to 3 if not found
-
     # Create issue data
     issue_data = {
         "fields": {
             "project": {"key": JIRA_PROJECT},
-            "summary": task_data[0],  # Task title
+            "summary": task_data[0],  # Epic title
             "description": f'''
 *Note from Confluence:*
 {task_data[4]}
             ''',
             "issuetype": {"name": ISSUE_TYPE},
             "priority": {"name": task_data[1].replace('Red', '').replace('Yellow', '')},  # Just clean the priority text
-            "assignee": {"id": assignee_account_id},  # Use the account ID for assignee
-            "reporter": {"id": reporter_account_id}  # Use the account ID for reporter
+            "assignee": {"id": assignee_account_id},  # Use the first owner's account ID for assignee
+            "reporter": {"id": reporter_account_id},  # Use the account ID for reporter
+            "customfield_10014": task_data[0]  # Epic Name field
         }
     }
 
@@ -80,14 +70,13 @@ def create_jira_ticket(task_data, reporter_account_id):
     try:
         # Create the issue
         ticket = jira.issue_create(fields=issue_data["fields"])
-        print(f"{Fore.GREEN}Successfully created Jira ticket: {ticket['key']}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Successfully created Jira Epic: {ticket['key']}{Style.RESET_ALL}")
         print(f"Title: {task_data[0]}")
         print(f"Priority: {task_data[1]}")
-        print(f"Story Points: {story_points}")
         print(f"Assignee: {task_data[3]}")
         return ticket
     except Exception as e:
-        print(f"{Fore.RED}Failed to create Jira ticket: {str(e)}{Style.RESET_ALL}")
+        print(f"{Fore.RED}Failed to create Jira Epic: {str(e)}{Style.RESET_ALL}")
         return None
 
 def get_user_details(account_id, confluence_url, username, api_token):
@@ -146,9 +135,9 @@ def extract_tagged_users(cell, confluence_url, username, api_token):
     
     return users
 
-def get_scope_table():
+def get_planned_epics():
     """
-    Fetch and parse the table under the Scope header from the Confluence page.
+    Fetch and parse the table under "Planned for H2" from the Confluence page.
     """
     # Initialize Confluence client
     confluence = Confluence(
@@ -169,6 +158,11 @@ def get_scope_table():
     # Parse HTML with BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
     
+    # Debug print all headers to see what we're working with
+    print(f"\n{Fore.YELLOW}Debug - All Headers:{Style.RESET_ALL}")
+    for header in soup.find_all(['h1', 'h2', 'h3']):
+        print(f"Header level {header.name}: {header.get_text(strip=True)}")
+    
     # Find the DRI line
     dri = None
     dri_account_id = None
@@ -187,16 +181,35 @@ def get_scope_table():
                     print(f"Account ID: {dri_account_id}")
                 break
     
-    # Find the Scope header
-    scope_header = soup.find('h1', string=PRD_PAGE_TABLE_HEADER)
-    if not scope_header:
-        print(f"{Fore.RED}Could not find '{PRD_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
+    # Try different ways to find the header
+    planned_header = None
+    
+    # Method 1: Direct h1 search
+    planned_header = soup.find('h1', string=H2_PAGE_TABLE_HEADER)
+    
+    # Method 2: Case-insensitive search
+    if not planned_header:
+        planned_header = soup.find('h1', string=lambda text: text and H2_PAGE_TABLE_HEADER.lower() in text.lower())
+    
+    # Method 3: Partial match
+    if not planned_header:
+        planned_header = soup.find('h1', string=lambda text: text and 'planned' in text.lower())
+    
+    if not planned_header:
+        print(f"{Fore.RED}Could not find '{H2_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Debug - HTML content around headers:{Style.RESET_ALL}")
+        # Print some HTML content to help debug
+        for header in soup.find_all(['h1', 'h2', 'h3']):
+            print(f"\nHeader: {header}")
+            print(f"Next element: {header.next_sibling}")
         return
     
-    # Find the next table after the Scope header
-    table = scope_header.find_next('table')
+    print(f"\n{Fore.GREEN}Found header: {planned_header.get_text(strip=True)}{Style.RESET_ALL}")
+    
+    # Find the next table after the header
+    table = planned_header.find_next('table')
     if not table:
-        print(f"{Fore.RED}Could not find table under '{PRD_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
+        print(f"{Fore.RED}Could not find table under '{H2_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
         return
     
     # Extract table data
@@ -228,24 +241,30 @@ def get_scope_table():
             rows.append(cells)
     
     # Print the table with formatting
-    print(f"\n{Fore.CYAN}Table under Scope header:{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}Table under '{H2_PAGE_TABLE_HEADER}' header:{Style.RESET_ALL}")
     # Create a copy of rows without the account ID for display
     display_rows = [row[:-1] for row in rows] if rows and len(rows[0]) > 5 else rows
     print(tabulate(display_rows, headers=headers, tablefmt="grid"))
 
-    # Create Jira ticket for the first row
+    # Create Jira Epics for each row
     if rows:
-        print(f"\n{Fore.YELLOW}Creating Jira ticket for first task...{Style.RESET_ALL}")
-        create_jira_ticket(rows[0], dri_account_id)  # Pass the DRI account ID to create_jira_ticket
+        print(f"\n{Fore.YELLOW}Creating Jira Epics...{Style.RESET_ALL}")
+        for row in rows:
+            # Check if the project title includes "KP3.7"
+            if "KP3.7" in row[0]:
+                print(f"\n{Fore.CYAN}Found KP3.7 project: {row[0]}{Style.RESET_ALL}")
+                create_jira_epic(row, dri_account_id)
+            else:
+                print(f"\n{Fore.YELLOW}Skipping non-KP3.7 project: {row[0]}{Style.RESET_ALL}")
     else:
-        print(f"{Fore.RED}No tasks found in the table.{Style.RESET_ALL}")
+        print(f"{Fore.RED}No epics found in the table.{Style.RESET_ALL}")
 
 def main():
     """
-    Main function to fetch and display the Scope table.
+    Main function to fetch and create Epics from the Planned for H2 table.
     """
     # Validate environment variables
-    required_vars = ['CONFLUENCE_URL', 'CONFLUENCE_USERNAME', 'CONFLUENCE_API_TOKEN', 'CONFLUENCE_PAGE_ID']
+    required_vars = ['CONFLUENCE_URL', 'CONFLUENCE_USERNAME', 'CONFLUENCE_API_TOKEN']
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
@@ -256,7 +275,7 @@ def main():
         return
 
     print(f"{Fore.GREEN}Fetching table from Confluence page...{Style.RESET_ALL}")
-    get_scope_table()
+    get_planned_epics()
     print(f"\n{Fore.GREEN}Done!{Style.RESET_ALL}")
 
 if __name__ == "__main__":
