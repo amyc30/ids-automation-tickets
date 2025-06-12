@@ -214,8 +214,6 @@ def get_planned_epics():
     
     # Extract table data
     headers = [th.get_text(strip=True) for th in table.find_all('th')]
-    print(f"\n{Fore.YELLOW}Debug - Headers:{Style.RESET_ALL}")
-    print(headers)
     
     rows = []
     for row in table.find_all('tr')[1:]:  # Skip header row
@@ -239,25 +237,45 @@ def get_planned_epics():
             # Add the owner account ID as the last element
             cells.append(owner_account_id)
             rows.append(cells)
-    
-    # Print the table with formatting
-    print(f"\n{Fore.CYAN}Table under '{H2_PAGE_TABLE_HEADER}' header:{Style.RESET_ALL}")
-    # Create a copy of rows without the account ID for display
-    display_rows = [row[:-1] for row in rows] if rows and len(rows[0]) > 5 else rows
-    print(tabulate(display_rows, headers=headers, tablefmt="grid"))
 
     # Create Jira Epics for each row
     if rows:
-        print(f"\n{Fore.YELLOW}Creating Jira Epics...{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}Processing KP projects...{Style.RESET_ALL}")
+        kp_count = 0
+        kp37_details = []  # List to store KP3.7 project details
+        
         for row in rows:
-            # Check if the project title includes "KP3.7"
-            if "KP3.7" in row[0]:
-                print(f"\n{Fore.CYAN}Found KP3.7 project: {row[0]}{Style.RESET_ALL}")
-                create_jira_epic(row, dri_account_id)
-            else:
-                print(f"\n{Fore.YELLOW}Skipping non-KP3.7 project: {row[0]}{Style.RESET_ALL}")
+            # Check if the project title includes "KP"
+            if "KP" in row[0]:
+                print(f"\n{Fore.CYAN}Found KP project: {row[0]}{Style.RESET_ALL}")
+                # create_jira_epic(row, dri_account_id)
+                kp_count += 1
+                
+                if "KP3.7" in row[0]:
+                    # Store details for KP3.7
+                    details = {
+                        'Project': row[0],
+                        'Priority': row[1],
+                        'Description': row[4],  # Note column
+                        'Owner': row[3],  # First owner
+                        'Link': row[5] if len(row) > 5 else 'No link'  # Link if available
+                    }
+                    kp37_details.append(details)
+        
+        print(f"\n{Fore.GREEN}Total KP projects found: {kp_count}{Style.RESET_ALL}")
+        
+        # Print KP3.7 details if any were found
+        if kp37_details:
+            print(f"\n{Fore.CYAN}KP3.7 Project Details:{Style.RESET_ALL}")
+            for details in kp37_details:
+                print(f"\n{Fore.YELLOW}Project: {details['Project']}{Style.RESET_ALL}")
+                print(f"Priority: {details['Priority']}")
+                print(f"Description: {details['Description']}")
+                print(f"Owner: {details['Owner']}")
+                print(f"Link: {details['Link']}")
+                print("-" * 50)
     else:
-        print(f"{Fore.RED}No epics found in the table.{Style.RESET_ALL}")
+        print(f"{Fore.RED}No projects found in the table.{Style.RESET_ALL}")
 
 def main():
     """
