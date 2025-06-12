@@ -185,6 +185,8 @@ def get_planned_epics():
                         'Success Measures': row[5],  # Success measure(s)
                         'Link': row[6] if len(row) > 5 else 'No link'  # Link if available
                     }
+            else:
+                print(f"DEBUG: Skipped: '{row[0]}'")
         
         print(f"\n{Fore.GREEN}Total KP projects found: {kp_count}{Style.RESET_ALL}")
         
