@@ -7,6 +7,7 @@ from colorama import init, Fore, Style
 from tabulate import tabulate
 import requests
 import json
+from main import get_user_details, extract_tagged_users  # Import the functions from main.py
 
 # Initialize colorama
 init()
@@ -78,62 +79,6 @@ def create_jira_epic(task_data, reporter_account_id):
     except Exception as e:
         print(f"{Fore.RED}Failed to create Jira Epic: {str(e)}{Style.RESET_ALL}")
         return None
-
-def get_user_details(account_id, confluence_url, username, api_token):
-    """
-    Get user details using direct REST API call.
-    """
-    # Construct the API URL - using the correct Confluence API endpoint
-    api_url = f"{confluence_url}/wiki/rest/api/user"
-    params = {'accountId': account_id}  # Use the complete account ID
-    
-    # Make the API request
-    response = requests.get(
-        api_url,
-        params=params,
-        auth=(username, api_token),
-        headers={'Accept': 'application/json'}
-    )
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"{Fore.RED}API request failed with status {response.status_code}: {response.text}{Style.RESET_ALL}")
-        return None
-
-def extract_tagged_users(cell, confluence_url, username, api_token):
-    """
-    Extract tagged users from a Confluence cell and get their display names.
-    """
-    users = []
-    
-    # Find all user elements
-    user_elements = cell.find_all('ri:user')
-    
-    for user in user_elements:
-        # Get the account ID
-        account_id = user.get('ri:account-id')
-        
-        if account_id:
-            try:
-                # Get user details using direct API call
-                user_details = get_user_details(account_id, confluence_url, username, api_token)
-                
-                if user_details and 'displayName' in user_details:
-                    display_name = user_details['displayName']
-                    users.append(display_name)
-                else:
-                    # Fallback to account ID if display name not found
-                    fallback_id = account_id.split(':')[-1]
-                    users.append(fallback_id)
-            except Exception as e:
-                print(f"{Fore.RED}Error fetching user details: {str(e)}{Style.RESET_ALL}")
-                # Fallback to account ID if API call fails
-                fallback_id = account_id.split(':')[-1]
-                print(f"Using fallback ID due to error: {fallback_id}")
-                users.append(fallback_id)
-    
-    return users
 
 def get_planned_epics():
     """
@@ -220,7 +165,7 @@ def get_planned_epics():
         cells = []
         owner_account_id = None
         for i, td in enumerate(row.find_all('td')):
-            if i == 3:  # Owner column (4th column)
+            if i == 4:  # Owner column (4th column)
                 # Get the first user element for account ID
                 user_element = td.find('ri:user')
                 if user_element:
@@ -229,7 +174,7 @@ def get_planned_epics():
                 users = extract_tagged_users(td, CONFLUENCE_URL, USERNAME, API_TOKEN)
                 owner_text = ', '.join(users) if users else ''
                 cells.append(owner_text)
-            elif i == 4:  # Note column (5th column)
+            elif i == 3:  # Note column (5th column)
                 cells.append(td.get_text(strip=True))
             else:
                 cells.append(td.get_text(strip=True))
@@ -253,12 +198,18 @@ def get_planned_epics():
                 
                 if "KP3.7" in row[0]:
                     # Store details for KP3.7
+                    print(f"\n{Fore.YELLOW}Debug - Row contents:{Style.RESET_ALL}")
+                    for i, content in enumerate(row):
+                        print(f"Index {i}: {content}")
+                    
                     details = {
                         'Project': row[0],
-                        'Priority': row[1],
-                        'Description': row[4],  # Note column
-                        'Owner': row[3],  # First owner
-                        'Link': row[5] if len(row) > 5 else 'No link'  # Link if available
+                        'Priority': row[2],
+                        'Description': row[3],  # Note column
+                        'Owner': row[4],  # Owner display name
+                        'Owner Account ID': row[-1],  # Owner account ID (last element)
+                        'Success Measures': row[5],  # Success measure(s)
+                        'Link': row[6] if len(row) > 5 else 'No link'  # Link if available
                     }
                     kp37_details.append(details)
         
@@ -272,6 +223,8 @@ def get_planned_epics():
                 print(f"Priority: {details['Priority']}")
                 print(f"Description: {details['Description']}")
                 print(f"Owner: {details['Owner']}")
+                print(f"Owner Account ID: {details['Owner Account ID']}")
+                print(f"Success Measures: {details['Success Measures']}")
                 print(f"Link: {details['Link']}")
                 print("-" * 50)
     else:
