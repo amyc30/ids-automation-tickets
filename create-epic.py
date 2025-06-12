@@ -35,46 +35,39 @@ def create_jira_epic(task_data, reporter_account_id):
         password=API_TOKEN
     )
 
-    # Get the first owner's account ID from the table
-    assignee_account_id = task_data[-1]  # The account ID we stored at the end of the cells
-
-    # Debug print for task data
-    print(f"\n{Fore.YELLOW}Debug - Epic Data:{Style.RESET_ALL}")
-    print(f"Title: {task_data[0]}")
-    print(f"Priority: {task_data[1].replace('Red', '').replace('Yellow', '').replace('Green', '')}")
-    print(f"Level of Effort: {task_data[2]}")
-    print(f"Owner: {task_data[3]}")
-    print(f"Owner Account ID: {assignee_account_id}")
-    print(f"Note: {task_data[4]}")
+    if not reporter_account_id:
+        print(f"{Fore.RED}Error: Reporter account ID is required but was not provided.{Style.RESET_ALL}")
+        return None
 
     # Create issue data
     issue_data = {
         "fields": {
             "project": {"key": JIRA_PROJECT},
-            "summary": task_data[0],  # Epic title
+            "summary": task_data['Project'],  # Epic title
             "description": f'''
-*Note from Confluence:*
-{task_data[4]}
+{task_data['Description']}
+
+*Success Measures:*
+{task_data['Success Measures']}
+
+*Link to PRD:*
+{task_data['Link']}
             ''',
             "issuetype": {"name": ISSUE_TYPE},
-            "priority": {"name": task_data[1].replace('Red', '').replace('Yellow', '')},  # Just clean the priority text
-            "assignee": {"id": assignee_account_id},  # Use the first owner's account ID for assignee
-            "reporter": {"id": reporter_account_id},  # Use the account ID for reporter
-            "customfield_10014": task_data[0]  # Epic Name field
+            "priority": {"name": task_data['Priority'].replace('Red', '').replace('Yellow', '')},  # Clean the priority text
+            "assignee": {"id": task_data['Owner Account ID']},  # Use the owner's account ID for assignee
+            "reporter": {"id": reporter_account_id}  # Use the account ID for reporter
         }
     }
-
-    # Debug print the complete issue data
-    print(f"\n{Fore.YELLOW}Debug - Issue Data:{Style.RESET_ALL}")
-    print(json.dumps(issue_data, indent=2))
 
     try:
         # Create the issue
         ticket = jira.issue_create(fields=issue_data["fields"])
         print(f"{Fore.GREEN}Successfully created Jira Epic: {ticket['key']}{Style.RESET_ALL}")
-        print(f"Title: {task_data[0]}")
-        print(f"Priority: {task_data[1]}")
-        print(f"Assignee: {task_data[3]}")
+        print(f"Title: {task_data['Project']}")
+        print(f"Priority: {task_data['Priority']}")
+        print(f"Assignee: {task_data['Owner']}")
+        print(f"Reporter Account ID: {reporter_account_id}")
         return ticket
     except Exception as e:
         print(f"{Fore.RED}Failed to create Jira Epic: {str(e)}{Style.RESET_ALL}")
@@ -107,24 +100,6 @@ def get_planned_epics():
     print(f"\n{Fore.YELLOW}Debug - All Headers:{Style.RESET_ALL}")
     for header in soup.find_all(['h1', 'h2', 'h3']):
         print(f"Header level {header.name}: {header.get_text(strip=True)}")
-    
-    # Find the DRI line
-    dri = None
-    dri_account_id = None
-    for p in soup.find_all('p'):
-        text = p.get_text(strip=True)
-        if text.startswith('DRI:'):
-            # Find the user element to get account ID
-            user_element = p.find('ri:user')
-            if user_element:
-                dri_account_id = user_element.get('ri:account-id')
-                # Get display name for debug
-                users = extract_tagged_users(p, CONFLUENCE_URL, USERNAME, API_TOKEN)
-                if users:
-                    print(f"\n{Fore.YELLOW}Debug - DRI/Reporter:{Style.RESET_ALL}")
-                    print(f"Original: {users[0]}")
-                    print(f"Account ID: {dri_account_id}")
-                break
     
     # Try different ways to find the header
     planned_header = None
@@ -187,7 +162,6 @@ def get_planned_epics():
     if rows:
         print(f"\n{Fore.YELLOW}Processing KP projects...{Style.RESET_ALL}")
         kp_count = 0
-        kp37_details = []  # List to store KP3.7 project details
         
         for row in rows:
             # Check if the project title includes "KP"
@@ -211,22 +185,24 @@ def get_planned_epics():
                         'Success Measures': row[5],  # Success measure(s)
                         'Link': row[6] if len(row) > 5 else 'No link'  # Link if available
                     }
-                    kp37_details.append(details)
         
         print(f"\n{Fore.GREEN}Total KP projects found: {kp_count}{Style.RESET_ALL}")
         
         # Print KP3.7 details if any were found
-        if kp37_details:
+        if details:
             print(f"\n{Fore.CYAN}KP3.7 Project Details:{Style.RESET_ALL}")
-            for details in kp37_details:
-                print(f"\n{Fore.YELLOW}Project: {details['Project']}{Style.RESET_ALL}")
-                print(f"Priority: {details['Priority']}")
-                print(f"Description: {details['Description']}")
-                print(f"Owner: {details['Owner']}")
-                print(f"Owner Account ID: {details['Owner Account ID']}")
-                print(f"Success Measures: {details['Success Measures']}")
-                print(f"Link: {details['Link']}")
-                print("-" * 50)
+
+            print(f"\n{Fore.YELLOW}Project: {details['Project']}{Style.RESET_ALL}")
+            print(f"Priority: {details['Priority']}")
+            print(f"Description: {details['Description']}")
+            print(f"Owner: {details['Owner']}")
+            print(f"Owner Account ID: {details['Owner Account ID']}")
+            print(f"Success Measures: {details['Success Measures']}")
+            print(f"Link: {details['Link']}")
+            print("-" * 50)
+            
+            # Create Jira Epic for this project
+            create_jira_epic(details, details['Owner Account ID'])
     else:
         print(f"{Fore.RED}No projects found in the table.{Style.RESET_ALL}")
 
