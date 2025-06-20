@@ -56,7 +56,8 @@ def create_jira_epic(task_data, reporter_account_id):
             "issuetype": {"name": ISSUE_TYPE},
             "priority": {"name": task_data['Priority'].replace('Red', '').replace('Yellow', '')},  # Clean the priority text
             "assignee": {"id": task_data['Owner Account ID']},  # Use the owner's account ID for assignee
-            "reporter": {"id": reporter_account_id}  # Use the account ID for reporter
+            "reporter": {"id": reporter_account_id},  # Use the account ID for reporter
+            "labels": ["ids-automation"]  # Add label for automation tracking
         }
     }
 
@@ -68,6 +69,7 @@ def create_jira_epic(task_data, reporter_account_id):
         print(f"Priority: {task_data['Priority']}")
         print(f"Assignee: {task_data['Owner']}")
         print(f"Reporter Account ID: {reporter_account_id}")
+        print(f"Labels: {', '.join(issue_data['fields']['labels'])}")
         return ticket
     except Exception as e:
         print(f"{Fore.RED}Failed to create Jira Epic: {str(e)}{Style.RESET_ALL}")
