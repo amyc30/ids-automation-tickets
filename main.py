@@ -69,7 +69,9 @@ def create_jira_ticket(task_data, reporter_account_id):
             "issuetype": {"name": ISSUE_TYPE},
             "priority": {"name": task_data[1].replace('Red', '').replace('Yellow', '')},  # Just clean the priority text
             "assignee": {"id": assignee_account_id},  # Use the account ID for assignee
-            "reporter": {"id": reporter_account_id}  # Use the account ID for reporter
+            "reporter": {"id": reporter_account_id},  # Use the account ID for reporter
+            "labels": ["ids-automation"],  # Add label for automation tracking
+            "components": [{"name": "IDS Internal"}]  # Add component
         }
     }
 
@@ -85,6 +87,8 @@ def create_jira_ticket(task_data, reporter_account_id):
         print(f"Priority: {task_data[1]}")
         print(f"Story Points: {story_points}")
         print(f"Assignee: {task_data[3]}")
+        print(f"Labels: {', '.join(issue_data['fields']['labels'])}")
+        print(f"Components: {', '.join(c['name'] for c in issue_data['fields']['components'])}")
         return ticket
     except Exception as e:
         print(f"{Fore.RED}Failed to create Jira ticket: {str(e)}{Style.RESET_ALL}")
