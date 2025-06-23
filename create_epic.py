@@ -1,82 +1,18 @@
-from atlassian import Confluence, Jira
+from atlassian import Confluence
 import re
 from bs4 import BeautifulSoup
-import os
-from dotenv import load_dotenv
 from colorama import init, Fore, Style
 from tabulate import tabulate
 import requests
 import json
 from main import get_user_details, extract_tagged_users  # Import the functions from main.py
 from update_epic import *
+from config import *
 
 # Initialize colorama
 init()
 
-# Load environment variables
-load_dotenv()
-
-# Configuration variables from .env
-CONFLUENCE_URL = os.getenv('CONFLUENCE_URL')
-JIRA_URL = os.getenv('CONFLUENCE_URL')  # Using same URL for Jira
-USERNAME = os.getenv('CONFLUENCE_USERNAME')
-API_TOKEN = os.getenv('CONFLUENCE_API_TOKEN')
-PAGE_ID = os.getenv('H2_PAGE_ID')
-
-# Jira configuration
-JIRA_PROJECT = os.getenv('JIRA_PROJECT')
-ISSUE_TYPE = "Epic"
-H2_PAGE_TABLE_HEADER = os.getenv('H2_PAGE_TABLE_HEADER')
-
-def create_jira_epic(task_data, reporter_account_id):
-    # Initialize Jira client
-    jira = Jira(
-        url=JIRA_URL,
-        username=USERNAME,
-        password=API_TOKEN
-    )
-
-    if not reporter_account_id:
-        print(f"{Fore.RED}Error: Reporter account ID is required but was not provided.{Style.RESET_ALL}")
-        return None
-
-    # Create issue data
-    issue_data = {
-        "fields": {
-            "project": {"key": JIRA_PROJECT},
-            "summary": task_data['Project'],  # Epic title
-            "description": f'''
-{task_data['Description']}
-
-*Success Measures:*
-{task_data['Success Measures']}
-
-*Link to PRD:*
-{task_data['Link']}
-            ''',
-            "issuetype": {"name": ISSUE_TYPE},
-            "priority": {"name": task_data['Priority'].replace('Red', '').replace('Yellow', '')},  # Clean the priority text
-            "assignee": {"id": task_data['Owner Account ID']},  # Use the owner's account ID for assignee
-            "reporter": {"id": reporter_account_id},  # Use the account ID for reporter
-            "labels": ["ids-automation"],  # Add label for automation tracking
-            "components": [{"name": "IDS Internal"}]  # Add component
-        }
-    }
-
-    try:
-        # Create the issue
-        ticket = jira.issue_create(fields=issue_data["fields"])
-        print(f"{Fore.GREEN}Successfully created Jira Epic: {ticket['key']}{Style.RESET_ALL}")
-        print(f"Title: {task_data['Project']}")
-        print(f"Priority: {task_data['Priority']}")
-        print(f"Assignee: {task_data['Owner']}")
-        print(f"Reporter Account ID: {reporter_account_id}")
-        print(f"Labels: {', '.join(issue_data['fields']['labels'])}")
-        print(f"Components: {', '.join(c['name'] for c in issue_data['fields']['components'])}")
-        return ticket
-    except Exception as e:
-        print(f"{Fore.RED}Failed to create Jira Epic: {str(e)}{Style.RESET_ALL}")
-        return None
+# Jira functions are now imported from update_epic module
 
 def get_planned_epics():
     """
@@ -220,30 +156,39 @@ def get_planned_epics():
                 
                 if existing_entry:
                     print(f"{Fore.YELLOW}Project already exists in epic.json with Jira epic: {existing_entry.get('jira_epic_id', 'N/A')}{Style.RESET_ALL}")
-                    # Update confluence_page_id if it's different
-                    if project_page_id and update_epic_entry(existing_entry, confluence_page_id=project_page_id):
+                    print(f"  Current page ID: {existing_entry.get('confluence_page_id', 'None')}")
+                    print(f"  Extracted page ID: {project_page_id}")
+                    
+                    # If page ID is missing (null) or different, update it
+                    if not existing_entry.get('confluence_page_id') and project_page_id:
+                        update_epic_entry(existing_entry, confluence_page_id=project_page_id)
                         updated = True
-                        print(f"{Fore.YELLOW}Updated confluence page ID for {row[0]} to {project_page_id}{Style.RESET_ALL}")
-                else:
-                    # Create new entry for this project
-                    if "KP3.7" in row[0]:
-                        # Store details for KP3.7
-                        print(f"\n{Fore.YELLOW}Debug - Row contents:{Style.RESET_ALL}")
-                        for i, content in enumerate(row):
-                            print(f"Index {i}: {content}")
+                        print(f"{Fore.GREEN}✓ Added missing page ID for {row[0]}: {project_page_id}{Style.RESET_ALL}")
+                    elif project_page_id and existing_entry.get('confluence_page_id') != project_page_id:
+                        # Update confluence_page_id if it's different
+                        update_epic_entry(existing_entry, confluence_page_id=project_page_id)
+                        updated = True
+                        print(f"{Fore.YELLOW}✓ Updated confluence page ID for {row[0]} from {existing_entry.get('confluence_page_id')} to {project_page_id}{Style.RESET_ALL}")
+                    elif not project_page_id:
+                        print(f"{Fore.RED}⚠ Could not extract page ID for {row[0]}{Style.RESET_ALL}")
+                    
+                    # Prepare project details for epic operations
+                    details = {
+                        'Project': row[0],
+                        'Priority': row[2],
+                        'Description': row[3],  # Note column
+                        'Owner': row[4],  # Owner display name
+                        'Owner Account ID': row[-1],  # Owner account ID (last element)
+                        'Success Measures': row[5],  # Success measure(s)
+                        'Link': row[6] if len(row) > 6 else 'No link'  # Link if available
+                    }
+                    
+                    # Check if this project needs a Jira epic created (jira_epic_id is null)
+                    if not existing_entry.get('jira_epic_id'):
+                        print(f"{Fore.CYAN}Project exists but has no Jira epic yet. Creating epic for {row[0]}{Style.RESET_ALL}")
                         
-                        details = {
-                            'Project': row[0],
-                            'Priority': row[2],
-                            'Description': row[3],  # Note column
-                            'Owner': row[4],  # Owner display name
-                            'Owner Account ID': row[-1],  # Owner account ID (last element)
-                            'Success Measures': row[5],  # Success measure(s)
-                            'Link': row[6] if len(row) > 6 else 'No link'  # Link if available
-                        }
-                        
-                        print(f"\n{Fore.CYAN}KP3.7 Project Details:{Style.RESET_ALL}")
-                        print(f"\n{Fore.YELLOW}Project: {details['Project']}{Style.RESET_ALL}")
+                        print(f"\n{Fore.CYAN}KP Project Details:{Style.RESET_ALL}")
+                        print(f"Project: {details['Project']}")
                         print(f"Priority: {details['Priority']}")
                         print(f"Description: {details['Description']}")
                         print(f"Owner: {details['Owner']}")
@@ -253,18 +198,62 @@ def get_planned_epics():
                         print("-" * 50)
                         
                         # Create Jira Epic for this project
-                        ticket = create_jira_epic(details, details['Owner Account ID'])
+                        ticket = create_jira_epic(details, details['Owner Account ID'], JIRA_URL, USERNAME, API_TOKEN, JIRA_PROJECT)
                         
                         if ticket:
-                            # Add new entry to epic_data using the extracted page ID
-                            add_epic_entry(epic_data, row[0], project_page_id, ticket['key'])
+                            # Update existing entry with the new epic ID
+                            update_epic_entry(existing_entry, jira_epic_id=ticket['key'])
                             updated = True
-                            print(f"{Fore.GREEN}Added {row[0]} to epic.json with page ID {project_page_id}{Style.RESET_ALL}")
+                            print(f"{Fore.GREEN}Created epic {ticket['key']} for {row[0]}{Style.RESET_ALL}")
+                        else:
+                            print(f"{Fore.RED}Failed to create epic for {row[0]}{Style.RESET_ALL}")
                     else:
-                        # For other KP projects, just add them to the JSON without creating epics
+                        # Epic exists, update it with new data from the table
+                        print(f"{Fore.CYAN}Updating existing epic {existing_entry.get('jira_epic_id')} for {row[0]}{Style.RESET_ALL}")
+                        
+                        if update_jira_epic(existing_entry.get('jira_epic_id'), details, JIRA_URL, USERNAME, API_TOKEN):
+                            print(f"{Fore.GREEN}Updated epic {existing_entry.get('jira_epic_id')} for {row[0]}{Style.RESET_ALL}")
+                        else:
+                            print(f"{Fore.RED}Failed to update epic {existing_entry.get('jira_epic_id')} for {row[0]}{Style.RESET_ALL}")
+                else:
+                    # Create new entry for this project - now processing ALL KP projects
+                    print(f"\n{Fore.YELLOW}Debug - Row contents for {row[0]}:{Style.RESET_ALL}")
+                    for idx, content in enumerate(row):
+                        print(f"Index {idx}: {content}")
+                    
+                    details = {
+                        'Project': row[0],
+                        'Priority': row[2],
+                        'Description': row[3],  # Note column
+                        'Owner': row[4],  # Owner display name
+                        'Owner Account ID': row[-1],  # Owner account ID (last element)
+                        'Success Measures': row[5],  # Success measure(s)
+                        'Link': row[6] if len(row) > 6 else 'No link'  # Link if available
+                    }
+                    
+                    print(f"\n{Fore.CYAN}KP Project Details:{Style.RESET_ALL}")
+                    print(f"\n{Fore.YELLOW}Project: {details['Project']}{Style.RESET_ALL}")
+                    print(f"Priority: {details['Priority']}")
+                    print(f"Description: {details['Description']}")
+                    print(f"Owner: {details['Owner']}")
+                    print(f"Owner Account ID: {details['Owner Account ID']}")
+                    print(f"Success Measures: {details['Success Measures']}")
+                    print(f"Link: {details['Link']}")
+                    print("-" * 50)
+                    
+                    # Create Jira Epic for this project
+                    ticket = create_jira_epic(details, details['Owner Account ID'], JIRA_URL, USERNAME, API_TOKEN, JIRA_PROJECT)
+                    
+                    if ticket:
+                        # Add new entry to epic_data using the extracted page ID
+                        add_epic_entry(epic_data, row[0], project_page_id, ticket['key'])
+                        updated = True
+                        print(f"{Fore.GREEN}Added {row[0]} to epic.json with page ID {project_page_id}{Style.RESET_ALL}")
+                    else:
+                        # If epic creation failed, still add to JSON without epic ID
                         add_epic_entry(epic_data, row[0], project_page_id)
                         updated = True
-                        print(f"{Fore.YELLOW}Added {row[0]} to epic.json (no epic created) with page ID {project_page_id}{Style.RESET_ALL}")
+                        print(f"{Fore.YELLOW}Added {row[0]} to epic.json (epic creation failed) with page ID {project_page_id}{Style.RESET_ALL}")
             else:
                 print(f"DEBUG: Skipped: '{row[0]}'")
         
@@ -282,11 +271,9 @@ def main():
     """
     Main function to fetch and create Epics from the Planned for H2 table.
     """
-    # Validate environment variables
-    required_vars = ['CONFLUENCE_URL', 'CONFLUENCE_USERNAME', 'CONFLUENCE_API_TOKEN']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
-    if missing_vars:
+    # Validate configuration
+    is_valid, missing_vars = validate_config()
+    if not is_valid:
         print(f"{Fore.RED}Error: Missing required environment variables:{Style.RESET_ALL}")
         for var in missing_vars:
             print(f"{Fore.YELLOW}- {var}{Style.RESET_ALL}")

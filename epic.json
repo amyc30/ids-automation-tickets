@@ -2,126 +2,126 @@
   {
     "project_name": "KP1.1: Android Pantry component migration",
     "confluence_page_id": "5166170501",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-828"
   },
   {
     "project_name": "KP1.2: iOS Pantry component migration",
     "confluence_page_id": "5165941144",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-829"
   },
   {
     "project_name": "KP1.3: Web Pantry component migration",
     "confluence_page_id": "5165908454",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-830"
   },
   {
     "project_name": "KP2.1: Design token implementation",
     "confluence_page_id": "5165941127",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-831"
   },
   {
     "project_name": "KP2.2: Typography refinement implementation",
     "confluence_page_id": "5165875661",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-832"
   },
   {
     "project_name": "KP2.3: Shopper Pantry adoption",
     "confluence_page_id": "5165875622",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-833"
   },
   {
     "project_name": "KP2.4: TDS - Ads Manager Domain Migration",
     "confluence_page_id": "5175246855",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-834"
   },
   {
     "project_name": "KP2.5: TDS component refactoring",
     "confluence_page_id": "5166235969",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-835"
   },
   {
     "project_name": "KP2.6: TDS component design",
     "confluence_page_id": "5166072407",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-836"
   },
   {
     "project_name": "KP2.7: Caper design system component design",
     "confluence_page_id": "5169709086",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-837"
   },
   {
     "project_name": "KP2.8: Caper design system component development",
     "confluence_page_id": "5165941392",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-838"
   },
   {
     "project_name": "KP3.1: Improve IDS eng release process and communication",
     "confluence_page_id": "5165810646",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-839"
   },
   {
     "project_name": "KP3.2:Infrastructureand process improvements",
     "confluence_page_id": "5166236042",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-840"
   },
   {
     "project_name": "KP3.3: Style Dictionary implementation",
     "confluence_page_id": null,
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-841"
   },
   {
     "project_name": "KP3.4: Android adoption measure improvements",
     "confluence_page_id": "5189402643",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-842"
   },
   {
-    "project_name": "KP3.4: IDS global contribution model",
+    "project_name": "KP3.5: IDS global contribution model",
     "confluence_page_id": null,
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-843"
   },
   {
-    "project_name": "KP3.5: AI-driven content review tooling",
+    "project_name": "KP3.6: AI-driven content review tooling",
     "confluence_page_id": null,
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-844"
   },
   {
-    "project_name": "KP3.6: Design surface repository",
+    "project_name": "KP3.7: Design surface repository",
     "confluence_page_id": "5166236452",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-845"
   },
   {
-    "project_name": "KP3.7: Figma design content injector plugin",
+    "project_name": "KP3.8: Figma design content injector plugin",
     "confluence_page_id": "5174657072",
-    "jira_epic_id": "IDS-783"
+    "jira_epic_id": "IDS-846"
   },
   {
-    "project_name": "KP3.8: IDS documentation site development",
+    "project_name": "KP3.9: IDS documentation site development",
     "confluence_page_id": "5165876114",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-847"
   },
   {
-    "project_name": "KP3.9: IDS engineering UXR",
+    "project_name": "KP3.10: IDS engineering UXR",
     "confluence_page_id": "5165941219",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-848"
   },
   {
     "project_name": "KP4.1: Caper quality improvements",
     "confluence_page_id": "5165777480",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-850"
   },
   {
     "project_name": "KP4.2: Content design standards",
     "confluence_page_id": "5172232202",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-851"
   },
   {
     "project_name": "KP4.3: AI-enabled prototyping support",
     "confluence_page_id": "5166006942",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-852"
   },
   {
     "project_name": "KP4.4: AI Standards, Principles, and Patterns",
     "confluence_page_id": "5165941451",
-    "jira_epic_id": null
+    "jira_epic_id": "IDS-853"
   }
 ]
