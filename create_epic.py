@@ -49,18 +49,18 @@ def get_planned_epics():
     planned_header = None
     
     # Method 1: Direct h1 search
-    planned_header = soup.find('h1', string=H2_PAGE_TABLE_HEADER)
+    planned_header = soup.find('h1', string=PAGE_TABLE_HEADER)
     
     # Method 2: Case-insensitive search
     if not planned_header:
-        planned_header = soup.find('h1', string=lambda text: text and H2_PAGE_TABLE_HEADER.lower() in text.lower())
+        planned_header = soup.find('h1', string=lambda text: text and PAGE_TABLE_HEADER.lower() in text.lower())
     
     # Method 3: Partial match
     if not planned_header:
         planned_header = soup.find('h1', string=lambda text: text and 'planned' in text.lower())
     
     if not planned_header:
-        print(f"{Fore.RED}Could not find '{H2_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
+        print(f"{Fore.RED}Could not find '{PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Debug - HTML content around headers:{Style.RESET_ALL}")
         # Print some HTML content to help debug
         for header in soup.find_all(['h1', 'h2', 'h3']):
@@ -73,7 +73,7 @@ def get_planned_epics():
     # Find the next table after the header
     table = planned_header.find_next('table')
     if not table:
-        print(f"{Fore.RED}Could not find table under '{H2_PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
+        print(f"{Fore.RED}Could not find table under '{PAGE_TABLE_HEADER}' header{Style.RESET_ALL}")
         return
     
     # Extract table data
@@ -272,7 +272,7 @@ def main():
     Main function to fetch and create Epics from the Planned for H2 table.
     """
     # Validate configuration
-    is_valid, missing_vars = validate_config()
+    is_valid, missing_vars = validate_epic_config()
     if not is_valid:
         print(f"{Fore.RED}Error: Missing required environment variables:{Style.RESET_ALL}")
         for var in missing_vars:

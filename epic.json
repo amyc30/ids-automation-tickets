@@ -56,17 +56,17 @@
   },
   {
     "project_name": "KP3.1: Improve IDS eng release process and communication",
-    "confluence_page_id": "5165810646",
+    "confluence_page_id": "5166236042",
     "jira_epic_id": "IDS-839"
   },
   {
-    "project_name": "KP3.2:Infrastructureand process improvements",
-    "confluence_page_id": "5166236042",
+    "project_name": "KP3.2: Infrastructure and process improvements",
+    "confluence_page_id": "5165810646",
     "jira_epic_id": "IDS-840"
   },
   {
     "project_name": "KP3.3: Style Dictionary implementation",
-    "confluence_page_id": null,
+    "confluence_page_id": "5182488577",
     "jira_epic_id": "IDS-841"
   },
   {
@@ -76,12 +76,12 @@
   },
   {
     "project_name": "KP3.5: IDS global contribution model",
-    "confluence_page_id": null,
+    "confluence_page_id": "5182521345",
     "jira_epic_id": "IDS-843"
   },
   {
     "project_name": "KP3.6: AI-driven content review tooling",
-    "confluence_page_id": null,
+    "confluence_page_id": "5182521368",
     "jira_epic_id": "IDS-844"
   },
   {
