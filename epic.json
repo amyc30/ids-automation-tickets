@@ -105,6 +105,16 @@
     "jira_epic_id": "IDS-848"
   },
   {
+    "project_name": "KP3.11: AI-enhanced engineering experience with design systems",
+    "confluence_page_id": "5241176065",
+    "jira_epic_id": "IDS-1239"
+  },
+  {
+    "project_name": "KP3.12: Caper design UXR",
+    "confluence_page_id": "5186847190",
+    "jira_epic_id": "IDS-1278"
+  },
+  {
     "project_name": "KP4.1: Caper quality improvements",
     "confluence_page_id": "5165777480",
     "jira_epic_id": "IDS-850"
